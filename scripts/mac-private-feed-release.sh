@@ -20,7 +20,7 @@ set -euo pipefail
 #   RETAIN_RELEASES            zips to keep (default 5)
 #   BUNDLE_ID                  passed through to the packager
 #   BUILD_CONFIG               packager build config (default release)
-#   BUILD_ARCHS                packager architectures (default arm64)
+#   BUILD_ARCHS                packager architectures (default: universal, from the packager)
 #   RELEASE_ALLOW_UNCLEAN=1    publish from a non-main, out-of-date, or dirty checkout
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -139,15 +139,17 @@ install first, or the machine is stranded on the higher number."
   fi
 fi
 
-# Pin the packager's inputs rather than inheriting its defaults. BUILD_CONFIG defaults to
+# Pin the packager's config rather than inheriting its default. BUILD_CONFIG defaults to
 # `debug`, where package-mac-app.sh downgrades the missing-Swift-runtime check to a warning
 # and skips apple-release-source-check.sh entirely — a published build could then fail to
-# launch on the receiving Mac with nothing wrong on the build machine. The feed carries no
-# architecture filtering, so the published slice must run on every consumer.
+# launch on the receiving Mac with nothing wrong on the build machine.
+#
+# BUILD_ARCHS is deliberately NOT pinned: under release the packager already defaults to
+# universal, and the feed carries no architecture filtering, so the published slice has to
+# run on every consumer Mac regardless of what the build host happens to be.
 BUILD_CONFIG="${BUILD_CONFIG:-release}"
-BUILD_ARCHS="${BUILD_ARCHS:-arm64}"
 
-echo "==> Building (APP_BUILD=$APP_BUILD, $BUILD_CONFIG/$BUILD_ARCHS, feed=$SPARKLE_FEED_URL)"
+echo "==> Building (APP_BUILD=$APP_BUILD, $BUILD_CONFIG/${BUILD_ARCHS:-universal}, feed=$SPARKLE_FEED_URL)"
 # CODESIGN_TIMESTAMP=on is mandatory: codesign-mac-app.sh only auto-enables the trusted
 # timestamp when SIGN_IDENTITY is a cert *name*, so a SHA-1-pinned identity would sign
 # without one and Apple would reject notarization. SKIP_* and the app-root override are
@@ -155,7 +157,6 @@ echo "==> Building (APP_BUILD=$APP_BUILD, $BUILD_CONFIG/$BUILD_ARCHS, feed=$SPAR
 APP_BUILD="$APP_BUILD" \
 CODESIGN_TIMESTAMP=on \
 BUILD_CONFIG="$BUILD_CONFIG" \
-BUILD_ARCHS="$BUILD_ARCHS" \
 SPARKLE_ALLOW_DEBUG_FEED=1 \
 SPARKLE_FEED_URL="$SPARKLE_FEED_URL" \
 SPARKLE_PUBLIC_ED_KEY="$SPARKLE_PUBLIC_ED_KEY" \
