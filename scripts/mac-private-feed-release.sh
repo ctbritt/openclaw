@@ -20,7 +20,7 @@ set -euo pipefail
 #   RETAIN_RELEASES            zips to keep (default 5)
 #   BUNDLE_ID                  passed through to the packager
 #   BUILD_CONFIG               packager build config (default release)
-#   BUILD_ARCHS                packager architectures (default: universal, from the packager)
+#   BUILD_ARCHS                packager architectures (default arm64; use "all" for universal)
 #   RELEASE_ALLOW_UNCLEAN=1    publish from a non-main, out-of-date, or dirty checkout
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -144,10 +144,13 @@ fi
 # and skips apple-release-source-check.sh entirely — a published build could then fail to
 # launch on the receiving Mac with nothing wrong on the build machine.
 #
-# BUILD_ARCHS is deliberately NOT pinned: under release the packager already defaults to
-# universal, and the feed carries no architecture filtering, so the published slice has to
-# run on every consumer Mac regardless of what the build host happens to be.
+# arm64 only. The feed has no architecture filtering, so the published slice must run on every
+# consumer — and every consumer here is Apple silicon (proven: an arm64-only build launched on
+# the MacBook Air, which an Intel Mac could not do; Rosetta only translates x86_64 toward arm).
+# Universal doubles build time for a slice nothing on this tailnet would ever execute. Set
+# BUILD_ARCHS=all before publishing if an Intel Mac ever joins the feed.
 BUILD_CONFIG="${BUILD_CONFIG:-release}"
+BUILD_ARCHS="${BUILD_ARCHS:-arm64}"
 
 echo "==> Building (APP_BUILD=$APP_BUILD, $BUILD_CONFIG/${BUILD_ARCHS:-universal}, feed=$SPARKLE_FEED_URL)"
 # CODESIGN_TIMESTAMP=on is mandatory: codesign-mac-app.sh only auto-enables the trusted
@@ -157,6 +160,7 @@ echo "==> Building (APP_BUILD=$APP_BUILD, $BUILD_CONFIG/${BUILD_ARCHS:-universal
 APP_BUILD="$APP_BUILD" \
 CODESIGN_TIMESTAMP=on \
 BUILD_CONFIG="$BUILD_CONFIG" \
+BUILD_ARCHS="$BUILD_ARCHS" \
 SPARKLE_ALLOW_DEBUG_FEED=1 \
 SPARKLE_FEED_URL="$SPARKLE_FEED_URL" \
 SPARKLE_PUBLIC_ED_KEY="$SPARKLE_PUBLIC_ED_KEY" \
