@@ -57,17 +57,14 @@ if [[ "${BUILD_ARCHS_VALUE}" == "all" ]]; then
 fi
 IFS=' ' read -r -a BUILD_ARCHS <<< "$BUILD_ARCHS_VALUE"
 PRIMARY_ARCH="${BUILD_ARCHS[0]}"
-SPARKLE_FEED_URL_EXPLICIT=0
-if [[ -n "${SPARKLE_FEED_URL:-}" ]]; then
-  SPARKLE_FEED_URL_EXPLICIT=1
-fi
 SPARKLE_PUBLIC_ED_KEY="${SPARKLE_PUBLIC_ED_KEY:-AGCY8w5vHirVfGGDGc8Szc5iuOqupZSh9pMj/Qs67XI=}"
 SPARKLE_FEED_URL="${SPARKLE_FEED_URL:-https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml}"
 AUTO_CHECKS=true
-# Debug bundles must never inherit the public release feed: the dev build would update
-# itself into the shipping app and destroy the local build. An explicitly supplied feed
-# is an operator opt-in (private/self-hosted appcast), so honor that instead of blanking.
-if [[ "$BUNDLE_ID" == *.debug && "$SPARKLE_FEED_URL_EXPLICIT" != "1" ]]; then
+# Debug bundles must never inherit a live feed: the dev build would update itself into the
+# published app and destroy the local build. Opting in takes a dedicated intent flag, never
+# the mere presence of SPARKLE_FEED_URL — that variable is routinely exported in a shell used
+# for publishing, and every dev build launched from it would silently arm auto-update.
+if [[ "$BUNDLE_ID" == *.debug && "${SPARKLE_ALLOW_DEBUG_FEED:-0}" != "1" ]]; then
   SPARKLE_FEED_URL=""
   AUTO_CHECKS=false
 fi
