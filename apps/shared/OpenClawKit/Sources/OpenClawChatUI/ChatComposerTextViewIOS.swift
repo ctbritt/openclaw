@@ -31,10 +31,17 @@ struct ChatComposerTextViewIOS: UIViewRepresentable {
         textView.isSelectable = self.isEnabled
         self.configureHistoryHandlers(textView)
 
-        if self.shouldFocus, self.isEnabled, !textView.isFirstResponder {
+        let action = ChatComposerFocusPolicy.action(
+            focusRequested: self.shouldFocus,
+            isEnabled: self.isEnabled,
+            holdsFocus: textView.isFirstResponder)
+        switch action {
+        case .claimFocus:
             textView.becomeFirstResponder()
-        } else if !self.shouldFocus || !self.isEnabled, textView.isFirstResponder {
+        case .releaseFocus:
             textView.resignFirstResponder()
+        case .none:
+            break
         }
 
         let isEcho = context.coordinator.lastReportedText == self.text
